@@ -48,6 +48,7 @@ jobs:
       uses: actions/setup-dotnet@v4
 
     - name: Install MAUI workload
+      if: runner.os != 'Linux'
       continue-on-error: true
       id: install-maui
       run: |
@@ -56,6 +57,7 @@ jobs:
       shell: bash
 
     - name: Install MAUI Windows workload
+      if: runner.os != 'Linux'
       continue-on-error: true
       id: install-maui-windows
       run: |
@@ -64,6 +66,7 @@ jobs:
       shell: bash
 
     - name: Install MAUI Android workload
+      if: runner.os != 'Linux'
       continue-on-error: true
       id: install-maui-android
       run: |
@@ -72,6 +75,7 @@ jobs:
       shell: bash
 
     - name: Install MAUI iOS workload
+      if: runner.os != 'Linux'
       continue-on-error: true
       id: install-maui-ios
       run: |
@@ -80,6 +84,7 @@ jobs:
       shell: bash
 
     - name: Install MAUI MacCatalyst workload
+      if: runner.os != 'Linux'
       continue-on-error: true
       id: install-maui-maccatalyst
       run: |
