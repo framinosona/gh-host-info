@@ -184,7 +184,7 @@ jobs:
 
               # Process JSON files
               if ls "$dir"/*.json >/dev/null 2>&1; then
-                echo "### 📄 JSON Files"
+                echo "## 📄 JSON Files"
                 echo
                 for json_file in "$dir"/*.json; do
                   [ -f "$json_file" ] || continue
@@ -204,7 +204,7 @@ jobs:
 
               # Process TXT files
               if ls "$dir"/*.txt >/dev/null 2>&1; then
-                echo "### 📝 Text Files"
+                echo "## 📝 Text Files"
                 echo
                 for txt_file in "$dir"/*.txt; do
                   [ -f "$txt_file" ] || continue
