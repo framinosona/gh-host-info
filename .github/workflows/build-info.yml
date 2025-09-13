@@ -165,33 +165,74 @@ jobs:
         # Copy downloaded artifacts into the site as static assets (preserve structure)
         rsync -a artifacts/ docfx/static/ 2>/dev/null || cp -R artifacts/* docfx/static/ 2>/dev/null || true
 
-        # Generate index with links to JSON/TXT from each runner artifact
+        # Generate index with collapsible OS sections and scrollable JSON blocks
         {
           echo "# Build Information"
           echo
-          echo "This site lists collected build information (JSON and TXT) from each runner."
+          echo "This site displays collected build information from GitHub-hosted runners."
+          echo "Click on an OS section to expand it, then click on individual JSON files to view their contents."
           echo
           if ls artifacts >/dev/null 2>&1; then
             for dir in artifacts/*; do
               [ -d "$dir" ] || continue
               name="$(basename "$dir")"
-              echo "## ${name}"
+              # Clean up the name for display
+              display_name=$(echo "$name" | sed 's/build-info-//' | sed 's/-/ /g')
+
+              echo "<details>"
+              echo "<summary><h2>🖥️ ${display_name}</h2></summary>"
               echo
-              found=false
-              while IFS= read -r -d '' file; do
-                found=true
-                rel=${file#artifacts/}
-                base=$(basename "$file")
-                echo "- [$base](static/$rel)"
-              done < <(find "$dir" -maxdepth 1 -type f \( -name '*.json' -o -name '*.txt' \) -print0 | sort -z)
-              if [ "$found" = false ]; then
-                echo "- (no JSON/TXT files found)"
+
+              # Process JSON files
+              if ls "$dir"/*.json >/dev/null 2>&1; then
+                echo "### 📄 JSON Files"
+                echo
+                for json_file in "$dir"/*.json; do
+                  [ -f "$json_file" ] || continue
+                  base=$(basename "$json_file" .json)
+                  echo "<details>"
+                  echo "<summary><strong>📋 ${base}.json</strong></summary>"
+                  echo
+                  echo "\`\`\`json"
+                  # Pretty print JSON with proper escaping
+                  cat "$json_file" | jq '.' 2>/dev/null || cat "$json_file"
+                  echo "\`\`\`"
+                  echo
+                  echo "</details>"
+                  echo
+                done
               fi
+
+              # Process TXT files
+              if ls "$dir"/*.txt >/dev/null 2>&1; then
+                echo "### 📝 Text Files"
+                echo
+                for txt_file in "$dir"/*.txt; do
+                  [ -f "$txt_file" ] || continue
+                  base=$(basename "$txt_file" .txt)
+                  echo "<details>"
+                  echo "<summary><strong>📄 ${base}.txt</strong></summary>"
+                  echo
+                  echo "\`\`\`"
+                  cat "$txt_file"
+                  echo "\`\`\`"
+                  echo
+                  echo "</details>"
+                  echo
+                done
+              fi
+
+              echo "</details>"
               echo
             done
           else
-            echo "No artifacts were found to display."
+            echo "❌ No artifacts were found to display."
           fi
+
+          echo "---"
+          echo
+          echo "*Last updated: $(date)*"
+
         } > docfx/index.md
 
         # Minimal DocFX configuration outputting to docfx/build
