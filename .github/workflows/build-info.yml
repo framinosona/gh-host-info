@@ -2,6 +2,8 @@ name: Build Information Collection
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 1 * *"  # Monthly on the 1st at midnight UTC
   push:
     branches: ["*"]
 
