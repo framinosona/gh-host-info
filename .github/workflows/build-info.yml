@@ -149,8 +149,11 @@ jobs:
     - name: Install DocFX
       shell: bash
       run: |
-        dotnet tool update -g docfx
-        echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+        # Download and install DocFX directly
+        wget https://github.com/dotnet/docfx/releases/latest/download/docfx-linux-x64.zip
+        unzip -q docfx-linux-x64.zip -d docfx-tool
+        chmod +x docfx-tool/docfx
+        echo "$(pwd)/docfx-tool" >> $GITHUB_PATH
 
     - name: Build DocFX site
       shell: bash
@@ -208,7 +211,7 @@ jobs:
         }
         EOF
 
-        dotnet docfx docfx/docfx.json
+        docfx docfx/docfx.json
 
     - name: Upload built site
       uses: actions/upload-artifact@v4
