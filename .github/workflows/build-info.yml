@@ -3,7 +3,7 @@ name: Build Information Collection
 on:
   workflow_dispatch:
   push:
-    branches: "*"
+    branches: ["*"]
 
 jobs:
   collect-build-info:
@@ -80,7 +80,3 @@ jobs:
         name: build-info-${{ matrix.os }}
         path: "output/*.*"
         if-no-files-found: ignore
-
-branding:
-  icon: 'book-open'
-  color: 'blue'
