@@ -143,161 +143,80 @@ jobs:
       with:
         path: artifacts
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
-    - name: Install docusaurus
-      run: |
-        npx create-docusaurus@latest docs classic --typescript
-        cd docs
-        npm install
-
-    - name: Generate markdown from artifacts
-      run: |
-        mkdir -p docs/docs/build-info
-
-        # Create main index page
-        cat > docs/docs/build-info/index.md << 'EOF'
-        ---
-        sidebar_position: 1
-        ---
-
-        # Build Information Collection
-
-        This documentation contains build information collected from various GitHub-hosted runners.
-
-        ## Available Platforms
-
-        EOF
-
-        # Process each platform's artifacts
-        for dir in artifacts/build-info-*; do
-          if [ -d "$dir" ]; then
-            platform=$(basename "$dir" | sed 's/build-info-//')
-            echo "Processing $platform..."
-
-            # Create platform-specific page
-            cat > "docs/docs/build-info/${platform}.md" << EOF
-        ---
-        sidebar_position: 2
-        ---
-
-        # ${platform}
-
-        Build information for ${platform} runner.
-
-        ## MAUI Workload Installation
-        \`\`\`
-        $(cat "$dir/workload-summary.txt" 2>/dev/null || echo "No workload summary available")
-        \`\`\`
-
-        ## .NET Information
-        \`\`\`
-        $(cat "$dir/dotnet-info.txt" 2>/dev/null || echo "No .NET info available")
-        \`\`\`
-
-        ## GitHub Context
-        \`\`\`json
-        $(cat "$dir/github.json" 2>/dev/null || echo "{}")
-        \`\`\`
-
-        ## Runner Information
-        \`\`\`json
-        $(cat "$dir/runner.json" 2>/dev/null || echo "{}")
-        \`\`\`
-
-        ## Environment Variables
-        \`\`\`json
-        $(cat "$dir/env.json" 2>/dev/null || echo "{}")
-        \`\`\`
-
-        ## Matrix Configuration
-        \`\`\`json
-        $(cat "$dir/matrix.json" 2>/dev/null || echo "{}")
-        \`\`\`
-        EOF
-
-            # Add to index
-            echo "- [$platform](./${platform}.md)" >> docs/docs/build-info/index.md
-          fi
-        done
-
-    - name: Update docusaurus config
-      run: |
-        cd docs
-        cat > docusaurus.config.ts << 'EOF'
-        import {themes as prismThemes} from 'prism-react-renderer';
-        import type {Config} from '@docusaurus/types';
-        import type * as Preset from '@docusaurus/preset-classic';
-
-        const config: Config = {
-          title: 'GitHub Runner Build Info',
-          tagline: 'Comprehensive build information from GitHub-hosted runners',
-          favicon: 'img/favicon.ico',
-          url: 'https://${{ github.repository_owner }}.github.io',
-          baseUrl: '/${{ github.event.repository.name }}/',
-          organizationName: '${{ github.repository_owner }}',
-          projectName: '${{ github.event.repository.name }}',
-          onBrokenLinks: 'throw',
-          onBrokenMarkdownLinks: 'warn',
-
-          presets: [
-            [
-              'classic',
-              {
-                docs: {
-                  sidebarPath: './sidebars.ts',
-                  routeBasePath: '/',
-                },
-                blog: false,
-                theme: {
-                  customCss: './src/css/custom.css',
-                },
-              } satisfies Preset.Options,
-            ],
-          ],
-
-          themeConfig: {
-            navbar: {
-              title: 'GitHub Runner Info',
-              items: [
-                {
-                  type: 'docSidebar',
-                  sidebarId: 'tutorialSidebar',
-                  position: 'left',
-                  label: 'Build Info',
-                },
-                {
-                  href: 'https://github.com/${{ github.repository }}',
-                  label: 'GitHub',
-                  position: 'right',
-                },
-              ],
-            },
-            prism: {
-              theme: prismThemes.github,
-              darkTheme: prismThemes.dracula,
-            },
-          } satisfies Preset.ThemeConfig,
-        };
-
-        export default config;
-        EOF
-
-    - name: Build site
-      run: |
-        cd docs
-        npm run build
-
     - name: Setup Pages
       uses: actions/configure-pages@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+
+    - name: Install DocFX
+      shell: bash
+      run: |
+        dotnet tool update -g docfx
+        echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+    - name: Build DocFX site
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p docfx/articles docfx/static
+
+        # Copy downloaded artifacts into the site as static assets (preserve structure)
+        rsync -a artifacts/ docfx/static/ 2>/dev/null || cp -R artifacts/* docfx/static/ 2>/dev/null || true
+
+        # Generate index with links to JSON/TXT from each runner artifact
+        {
+          echo "# Build Information"
+          echo
+          echo "This site lists collected build information (JSON and TXT) from each runner."
+          echo
+          if ls artifacts >/dev/null 2>&1; then
+            for dir in artifacts/*; do
+              [ -d "$dir" ] || continue
+              name="$(basename "$dir")"
+              echo "## ${name}"
+              echo
+              found=false
+              while IFS= read -r -d '' file; do
+                found=true
+                rel=${file#artifacts/}
+                base=$(basename "$file")
+                echo "- [$base](static/$rel)"
+              done < <(find "$dir" -maxdepth 1 -type f \( -name '*.json' -o -name '*.txt' \) -print0 | sort -z)
+              if [ "$found" = false ]; then
+                echo "- (no JSON/TXT files found)"
+              fi
+              echo
+            done
+          else
+            echo "No artifacts were found to display."
+          fi
+        } > docfx/index.md
+
+        # Minimal DocFX configuration outputting to docfx/build
+        cat > docfx/docfx.json << 'EOF'
+        {
+          "build": {
+            "content": [
+              { "files": [ "index.md" ] }
+            ],
+            "resource": [
+              { "files": [ "static/**" ] }
+            ],
+            "dest": "build",
+            "globalMetadata": {
+              "_enableSearch": "true"
+            }
+          }
+        }
+        EOF
+
+        docfx docfx/docfx.json
 
     - name: Upload to GitHub Pages
       uses: actions/upload-pages-artifact@v3
       with:
-        path: docs/build
+        path: docfx/build
 
     - name: Deploy to GitHub Pages
       id: deployment
