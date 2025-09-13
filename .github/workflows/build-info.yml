@@ -133,14 +133,6 @@ jobs:
   generate-site:
     needs: collect-build-info
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
     - name: Checkout code
@@ -150,9 +142,6 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: artifacts
-
-    - name: Setup Pages
-      uses: actions/configure-pages@v4
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -219,12 +208,40 @@ jobs:
         }
         EOF
 
-        docfx docfx/docfx.json
+        dotnet docfx docfx/docfx.json
+
+    - name: Upload built site
+      uses: actions/upload-artifact@v4
+      with:
+        name: github-pages-site
+        path: docfx/build
+
+  deploy-site:
+    needs: generate-site
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Download built site
+      uses: actions/download-artifact@v4
+      with:
+        name: github-pages-site
+        path: site
 
     - name: Upload to GitHub Pages
       uses: actions/upload-pages-artifact@v3
       with:
-        path: docfx/build
+        path: site
 
     - name: Deploy to GitHub Pages
       id: deployment
