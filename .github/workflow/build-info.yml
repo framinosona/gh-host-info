@@ -1,0 +1,85 @@
+name: Build Information Collection
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  collect-build-info:
+    strategy:
+      matrix:
+        include:
+          # https://docs.github.com/en/actions/reference/runners/github-hosted-runners
+          - os: ubuntu-22.04
+            name: "Ubuntu 22.04"
+          - os: ubuntu-24.04
+            name: "Ubuntu 24.04"
+          - os: windows-2022
+            name: "Windows Server 2022"
+          - os: windows-2025
+            name: "Windows Server 2025"
+          - os: macos-13
+            name: "macOS 13"
+          - os: macos-14
+            name: "macOS 14"
+          - os: macos-15
+            name: "macOS 15"
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+
+    - name: "Generate output directory"
+      if: always()
+      shell: bash
+      run: |
+        mkdir -p "output/"
+        cat >> "output/github.json" << 'EOF'
+        ${{ toJson(github) }}
+        EOF
+        cat >> "output/runner.json" << 'EOF'
+        ${{ toJson(runner) }}
+        EOF
+        cat >> "output/strategy.json" << 'EOF'
+        ${{ toJson(strategy) }}
+        EOF
+        cat >> "output/matrix.json" << 'EOF'
+        ${{ toJson(matrix) }}
+        EOF
+        cat >> "output/job.json" << 'EOF'
+        ${{ toJson(job) }}
+        EOF
+        cat >> "output/steps.json" << 'EOF'
+        ${{ toJson(steps) }}
+        EOF
+        cat >> "output/env.json" << 'EOF'
+        ${{ toJson(env) }}
+        EOF
+        cat >> "output/vars.json" << 'EOF'
+        ${{ toJson(vars) }}
+        EOF
+        cat >> "output/needs.json" << 'EOF'
+        ${{ toJson(needs) }}
+        EOF
+        cat >> "output/inputs.json" << 'EOF'
+        ${{ toJson(inputs) }}
+        EOF
+        cat >> "output/dotnet-info.txt" << 'EOF'
+        $(dotnet --info)
+        EOF
+
+    - name: Upload Build Information as Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-info-${{ matrix.os }}
+        path: "output/*.*"
+        if-no-files-found: ignore
+
+branding:
+  icon: 'book-open'
+  color: 'blue'
