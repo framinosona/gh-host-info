@@ -101,17 +101,14 @@ jobs:
         mkdir -p "output/"
         echo '${{ toJson(github) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/github.json
         echo '${{ toJson(runner) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/runner.json
-        echo '${{ toJson(secrets) }}' | sed 's/"token": *"[^"]*"/"[REDACTED_FOR_SECURITY]"/g' > output/secrets.json
         echo '${{ toJson(matrix) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/matrix.json
         echo '${{ toJson(job) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/job.json
         echo '${{ toJson(env) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/env.json
         echo '${{ toJson(steps) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/steps.json
-        echo '${{ toJson(needs) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/needs.json
-        echo '${{ toJson(inputs) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/inputs.json
         dotnet --info > output/dotnet-info.txt
 
         # Create workload installation summary
-        cat > output/workload-summary.txt << 'EOF'
+        cat > output/workload-summary.txt << EOF
         # MAUI Workload Installation Summary
 
         ## Installation Results:
