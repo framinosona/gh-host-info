@@ -67,6 +67,7 @@ jobs:
       shell: bash
 
     - name: Install MAUI iOS workload
+      if: runner.os != 'Linux'
       continue-on-error: true
       id: install-maui-ios
       run: |
@@ -75,6 +76,7 @@ jobs:
       shell: bash
 
     - name: Install MAUI MacCatalyst workload
+      if: runner.os != 'Linux'
       continue-on-error: true
       id: install-maui-maccatalyst
       run: |
