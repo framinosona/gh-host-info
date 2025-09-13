@@ -149,11 +149,12 @@ jobs:
     - name: Install DocFX
       shell: bash
       run: |
-        # Download and install DocFX directly
-        wget https://github.com/dotnet/docfx/releases/latest/download/docfx-linux-x64.zip
-        unzip -q docfx-linux-x64.zip -d docfx-tool
-        chmod +x docfx-tool/docfx
-        echo "$(pwd)/docfx-tool" >> $GITHUB_PATH
+        # Install DocFX as a local tool instead of global
+        dotnet new tool-manifest --force
+        dotnet tool install docfx --version 2.78.3
+
+        # Verify installation
+        dotnet docfx --version
 
     - name: Build DocFX site
       shell: bash
@@ -211,7 +212,7 @@ jobs:
         }
         EOF
 
-        docfx docfx/docfx.json
+        dotnet docfx docfx/docfx.json
 
     - name: Upload built site
       uses: actions/upload-artifact@v4
