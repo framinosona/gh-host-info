@@ -179,8 +179,6 @@ jobs:
               # Clean up the name for display
               display_name=$(echo "$name" | sed 's/build-info-//' | sed 's/-/ /g')
               echo "## 🖥️ ${display_name}"
-              echo "<details>"
-              echo "<summary>Click to expand</summary>"
               echo
 
               # Process JSON files
@@ -222,7 +220,6 @@ jobs:
                 done
               fi
 
-              echo "</details>"
               echo
             done
           else
