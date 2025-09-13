@@ -5,6 +5,13 @@ on:
   push:
     branches: ["*"]
 
+env:
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_CLI_HOME: ${{ github.workspace }}/.dotnet-home
+
 jobs:
   collect-build-info:
     strategy:
@@ -35,43 +42,75 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
 
+    - name: Install MAUI workload
+      continue-on-error: true
+      id: install-maui
+      run: |
+        dotnet workload install maui --skip-manifest-update
+        echo "maui=success" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Install MAUI Windows workload
+      continue-on-error: true
+      id: install-maui-windows
+      run: |
+        dotnet workload install maui-windows --skip-manifest-update
+        echo "maui-windows=success" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Install MAUI Android workload
+      continue-on-error: true
+      id: install-maui-android
+      run: |
+        dotnet workload install maui-android --skip-manifest-update
+        echo "maui-android=success" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Install MAUI iOS workload
+      continue-on-error: true
+      id: install-maui-ios
+      run: |
+        dotnet workload install maui-ios --skip-manifest-update
+        echo "maui-ios=success" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Install MAUI MacCatalyst workload
+      continue-on-error: true
+      id: install-maui-maccatalyst
+      run: |
+        dotnet workload install maui-maccatalyst --skip-manifest-update
+        echo "maui-maccatalyst=success" >> $GITHUB_OUTPUT
+      shell: bash
+
     - name: "Generate output directory"
       if: always()
       shell: bash
       run: |
         mkdir -p "output/"
-        cat >> "output/github.json" << 'EOF'
-        ${{ toJson(github) }}
-        EOF
-        cat >> "output/runner.json" << 'EOF'
-        ${{ toJson(runner) }}
-        EOF
-        cat >> "output/strategy.json" << 'EOF'
-        ${{ toJson(strategy) }}
-        EOF
-        cat >> "output/matrix.json" << 'EOF'
-        ${{ toJson(matrix) }}
-        EOF
-        cat >> "output/job.json" << 'EOF'
-        ${{ toJson(job) }}
-        EOF
-        cat >> "output/steps.json" << 'EOF'
-        ${{ toJson(steps) }}
-        EOF
-        cat >> "output/env.json" << 'EOF'
-        ${{ toJson(env) }}
-        EOF
-        cat >> "output/vars.json" << 'EOF'
-        ${{ toJson(vars) }}
-        EOF
-        cat >> "output/needs.json" << 'EOF'
-        ${{ toJson(needs) }}
-        EOF
-        cat >> "output/inputs.json" << 'EOF'
-        ${{ toJson(inputs) }}
-        EOF
-        cat >> "output/dotnet-info.txt" << 'EOF'
-        $(dotnet --info)
+        echo '${{ toJson(github) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/github.json
+        echo '${{ toJson(runner) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/runner.json
+        echo '${{ toJson(secrets) }}' | sed 's/"token": *"[^"]*"/"[REDACTED_FOR_SECURITY]"/g' > output/secrets.json
+        echo '${{ toJson(matrix) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/matrix.json
+        echo '${{ toJson(job) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/job.json
+        echo '${{ toJson(env) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/env.json
+        echo '${{ toJson(steps) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/steps.json
+        echo '${{ toJson(needs) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/needs.json
+        echo '${{ toJson(inputs) }}' | sed 's/"token": *"[^"]*"/"token": "[REDACTED_FOR_SECURITY]"/g' > output/inputs.json
+        dotnet --info > output/dotnet-info.txt
+
+        # Create workload installation summary
+        cat > output/workload-summary.txt << 'EOF'
+        # MAUI Workload Installation Summary
+
+        ## Installation Results:
+        - MAUI Core: ${{ steps.install-maui.outcome == 'success' && 'SUCCESS' || 'FAILED' }}
+        - MAUI Windows: ${{ steps.install-maui-windows.outcome == 'success' && 'SUCCESS' || 'FAILED' }}
+        - MAUI Android: ${{ steps.install-maui-android.outcome == 'success' && 'SUCCESS' || 'FAILED' }}
+        - MAUI iOS: ${{ steps.install-maui-ios.outcome == 'success' && 'SUCCESS' || 'FAILED' }}
+        - MAUI MacCatalyst: ${{ steps.install-maui-maccatalyst.outcome == 'success' && 'SUCCESS' || 'FAILED' }}
+
+        ## Platform: ${{ matrix.os }}
+        ## Date: $(date)
         EOF
 
     - name: Upload Build Information as Artifact
@@ -80,3 +119,184 @@ jobs:
         name: build-info-${{ matrix.os }}
         path: "output/*.*"
         if-no-files-found: ignore
+
+  generate-site:
+    needs: collect-build-info
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install docusaurus
+      run: |
+        npx create-docusaurus@latest docs classic --typescript
+        cd docs
+        npm install
+
+    - name: Generate markdown from artifacts
+      run: |
+        mkdir -p docs/docs/build-info
+
+        # Create main index page
+        cat > docs/docs/build-info/index.md << 'EOF'
+        ---
+        sidebar_position: 1
+        ---
+
+        # Build Information Collection
+
+        This documentation contains build information collected from various GitHub-hosted runners.
+
+        ## Available Platforms
+
+        EOF
+
+        # Process each platform's artifacts
+        for dir in artifacts/build-info-*; do
+          if [ -d "$dir" ]; then
+            platform=$(basename "$dir" | sed 's/build-info-//')
+            echo "Processing $platform..."
+
+            # Create platform-specific page
+            cat > "docs/docs/build-info/${platform}.md" << EOF
+        ---
+        sidebar_position: 2
+        ---
+
+        # ${platform}
+
+        Build information for ${platform} runner.
+
+        ## MAUI Workload Installation
+        \`\`\`
+        $(cat "$dir/workload-summary.txt" 2>/dev/null || echo "No workload summary available")
+        \`\`\`
+
+        ## .NET Information
+        \`\`\`
+        $(cat "$dir/dotnet-info.txt" 2>/dev/null || echo "No .NET info available")
+        \`\`\`
+
+        ## GitHub Context
+        \`\`\`json
+        $(cat "$dir/github.json" 2>/dev/null || echo "{}")
+        \`\`\`
+
+        ## Runner Information
+        \`\`\`json
+        $(cat "$dir/runner.json" 2>/dev/null || echo "{}")
+        \`\`\`
+
+        ## Environment Variables
+        \`\`\`json
+        $(cat "$dir/env.json" 2>/dev/null || echo "{}")
+        \`\`\`
+
+        ## Matrix Configuration
+        \`\`\`json
+        $(cat "$dir/matrix.json" 2>/dev/null || echo "{}")
+        \`\`\`
+        EOF
+
+            # Add to index
+            echo "- [$platform](./${platform}.md)" >> docs/docs/build-info/index.md
+          fi
+        done
+
+    - name: Update docusaurus config
+      run: |
+        cd docs
+        cat > docusaurus.config.ts << 'EOF'
+        import {themes as prismThemes} from 'prism-react-renderer';
+        import type {Config} from '@docusaurus/types';
+        import type * as Preset from '@docusaurus/preset-classic';
+
+        const config: Config = {
+          title: 'GitHub Runner Build Info',
+          tagline: 'Comprehensive build information from GitHub-hosted runners',
+          favicon: 'img/favicon.ico',
+          url: 'https://${{ github.repository_owner }}.github.io',
+          baseUrl: '/${{ github.event.repository.name }}/',
+          organizationName: '${{ github.repository_owner }}',
+          projectName: '${{ github.event.repository.name }}',
+          onBrokenLinks: 'throw',
+          onBrokenMarkdownLinks: 'warn',
+
+          presets: [
+            [
+              'classic',
+              {
+                docs: {
+                  sidebarPath: './sidebars.ts',
+                  routeBasePath: '/',
+                },
+                blog: false,
+                theme: {
+                  customCss: './src/css/custom.css',
+                },
+              } satisfies Preset.Options,
+            ],
+          ],
+
+          themeConfig: {
+            navbar: {
+              title: 'GitHub Runner Info',
+              items: [
+                {
+                  type: 'docSidebar',
+                  sidebarId: 'tutorialSidebar',
+                  position: 'left',
+                  label: 'Build Info',
+                },
+                {
+                  href: 'https://github.com/${{ github.repository }}',
+                  label: 'GitHub',
+                  position: 'right',
+                },
+              ],
+            },
+            prism: {
+              theme: prismThemes.github,
+              darkTheme: prismThemes.dracula,
+            },
+          } satisfies Preset.ThemeConfig,
+        };
+
+        export default config;
+        EOF
+
+    - name: Build site
+      run: |
+        cd docs
+        npm run build
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Upload to GitHub Pages
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs/build
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
