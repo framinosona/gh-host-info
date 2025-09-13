@@ -128,6 +128,7 @@ jobs:
         name: build-info-${{ matrix.os }}
         path: "output/*.*"
         if-no-files-found: ignore
+        retention-days: 1
 
   generate-site:
     needs: collect-build-info
@@ -177,20 +178,20 @@ jobs:
               name="$(basename "$dir")"
               # Clean up the name for display
               display_name=$(echo "$name" | sed 's/build-info-//' | sed 's/-/ /g')
-
+              echo "## 🖥️ ${display_name}"
               echo "<details>"
-              echo "<summary><h2>🖥️ ${display_name}</h2></summary>"
+              echo "<summary>Click to expand</summary>"
               echo
 
               # Process JSON files
               if ls "$dir"/*.json >/dev/null 2>&1; then
-                echo "## 📄 JSON Files"
+                echo "### 📄 JSON Files"
                 echo
                 for json_file in "$dir"/*.json; do
                   [ -f "$json_file" ] || continue
                   base=$(basename "$json_file" .json)
                   echo "<details>"
-                  echo "<summary><strong>📋 ${base}.json</strong></summary>"
+                  echo "<summary><strong>📋 ${base}.json</strong> - Click to expand</summary>"
                   echo
                   echo "\`\`\`json"
                   # Pretty print JSON with proper escaping
@@ -204,13 +205,13 @@ jobs:
 
               # Process TXT files
               if ls "$dir"/*.txt >/dev/null 2>&1; then
-                echo "## 📝 Text Files"
+                echo "### 📝 Text Files"
                 echo
                 for txt_file in "$dir"/*.txt; do
                   [ -f "$txt_file" ] || continue
                   base=$(basename "$txt_file" .txt)
                   echo "<details>"
-                  echo "<summary><strong>📄 ${base}.txt</strong></summary>"
+                  echo "<summary><strong>📄 ${base}.txt</strong> - Click to expand</summary>"
                   echo
                   echo "\`\`\`"
                   cat "$txt_file"
@@ -259,6 +260,7 @@ jobs:
       with:
         name: github-pages-site
         path: docfx/build
+        retention-days: 1
 
   deploy-site:
     needs: generate-site
