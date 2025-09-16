@@ -1,13 +1,13 @@
 # GitHub Runner Build Information 🏗️
 
-[![Build Status](https://github.com/framinosona/gh-host-info/actions/workflows/build-info.yml/badge.svg)](https://github.com/framinosona/gh-host-info/actions/workflows/build-info.yml)
-[![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://framinosona.github.io/gh-host-info)
+[![Build Status](https://github.com/framinosona/GitHub_Runner_Information/actions/workflows/build-info.yml/badge.svg)](https://github.com/framinosona/GitHub_Runner_Information/actions/workflows/build-info.yml)
+[![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://framinosona.github.io/GitHub_Runner_Information)
 
 > Comprehensive build information collection from GitHub-hosted runners across multiple platforms
 
 ## 🌐 Live Documentation
 
-**[View the interactive documentation site →](https://framinosona.github.io/gh-host-info)**
+**[View the interactive documentation site →](https://framinosona.github.io/GitHub_Runner_Information)**
 
 The site provides detailed build information for all GitHub-hosted runners with:
 
@@ -65,7 +65,7 @@ collect-build-info → generate-site → deploy-site
 ## 📁 Repository Structure
 
 ```text
-gh-host-info/
+GitHub_Runner_Information/
 ├── .github/workflows/
 │   └── build-info.yml      # Main collection workflow
 ├── docs/
@@ -100,6 +100,6 @@ This project is particularly useful for:
 
 ---
 
-**[📖 Explore the Documentation](https://framinosona.github.io/gh-host-info)** | **[🚀 View Workflow Runs](https://github.com/framinosona/gh-host-info/actions)**
+**[📖 Explore the Documentation](https://framinosona.github.io/GitHub_Runner_Information)** | **[🚀 View Workflow Runs](https://github.com/framinosona/GitHub_Runner_Information/actions)**
 
 > Automatically updated with each workflow run
